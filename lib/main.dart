@@ -1,11 +1,21 @@
-import 'dart:ui';
-
+import 'dart:ui'
+    show
+        Canvas,
+        Offset,
+        Paint,
+        PaintingStyle,
+        Path,
+        PathMetric,
+        PathMetrics,
+        Size,
+        Tangent;
 import 'package:flutter/material.dart';
 // import 'dart:math' as math;
 
 void main() => runApp(
       const MaterialApp(
-        home: AnimatedPathDemo(),
+        // home: AnimatedPathDemo(),
+        home: SampleAnimation(),
       ),
     );
 
@@ -48,10 +58,10 @@ class AnimatedPathDemo extends StatefulWidget {
   const AnimatedPathDemo({Key? key}) : super(key: key);
 
   @override
-  _AnimatedPathDemoState createState() => _AnimatedPathDemoState();
+  AnimatedPathDemoState createState() => AnimatedPathDemoState();
 }
 
-class _AnimatedPathDemoState extends State<AnimatedPathDemo>
+class AnimatedPathDemoState extends State<AnimatedPathDemo>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
@@ -59,7 +69,7 @@ class _AnimatedPathDemoState extends State<AnimatedPathDemo>
     _controller.stop();
     _controller.reset();
     _controller.repeat(
-      period: const Duration(seconds: 5),
+      period: const Duration(seconds: 2),
     );
   }
 
@@ -144,7 +154,104 @@ Path extractPathUntilLength(
   return path;
 }
 
+//
+class SampleAnimation extends StatefulWidget {
+  const SampleAnimation({Key? key}) : super(key: key);
 
+  @override
+  State<StatefulWidget> createState() {
+    return SampleAnimationState();
+  }
+}
+
+class SampleAnimationState extends State<SampleAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation _animation;
+  late Path _path;
+
+  @override
+  void initState() {
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1000));
+    super.initState();
+    _animation = Tween(begin: 0.0, end: 1.0).animate(_controller)
+      ..addListener(() {
+        setState(() {});
+      });
+    _controller.forward();
+    _path = drawPath();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: <Widget>[
+          Positioned(
+            top: 0,
+            child: CustomPaint(
+              painter: PathPainter(_path),
+            ),
+          ),
+          Positioned(
+            top: calculate(_animation.value).dy,
+            left: calculate(_animation.value).dx,
+            child: Container(
+              decoration: BoxDecoration(
+                  color: Colors.blueAccent,
+                  borderRadius: BorderRadius.circular(10)),
+              width: 10,
+              height: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Path drawPath() {
+    Size size = const Size(300, 300);
+    Path path = Path();
+    path.moveTo(0, size.height / 2);
+    path.quadraticBezierTo(
+        size.width / 2, size.height, size.width, size.height);
+    return path;
+  }
+
+  Offset calculate(value) {
+    PathMetrics pathMetrics = _path.computeMetrics();
+    PathMetric pathMetric = pathMetrics.elementAt(0);
+    value = pathMetric.length * value;
+    Tangent? pos = pathMetric.getTangentForOffset(value);
+    return pos!.position;
+  }
+}
+
+class PathPainter extends CustomPainter {
+  Path path;
+
+  PathPainter(this.path);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()
+      ..color = Colors.redAccent.withOpacity(0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
+}
 
 
 // void main() => runApp(MyApp());
